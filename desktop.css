@@ -1,0 +1,105 @@
+/* desktop.css */
+html, body {
+    overflow: hidden; /* Verhindert Scrollbalken auf der Hauptseite */
+    height: 100%;
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+#desktop {
+    height: calc(100% - 40px); /* Volle Höhe minus Taskleiste */
+    width: 100%;
+    background: #0d0d0d url('image/desktop-background.jpg') no-repeat center center;
+    background-size: cover;
+    position: relative;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.desktop-icon {
+    width: 100px;
+    text-align: center;
+    color: white;
+    cursor: pointer;
+    margin-bottom: 20px;
+}
+.desktop-icon img {
+    width: 64px;
+    height: 64px;
+}
+.desktop-icon span {
+    display: block;
+    text-shadow: 1px 1px 3px black;
+}
+
+#taskbar {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: 40px;
+    background: #1a1a1a;
+    border-top: 1px solid #333;
+    display: flex;
+    align-items: center;
+    z-index: 10000;
+}
+
+.start-menu-button {
+    color: #00ff7f;
+    font-weight: bold;
+    padding: 0 15px;
+    cursor: pointer;
+}
+.taskbar-logout a {
+    color: #e0e0e0;
+    text-decoration: none;
+    position: absolute;
+    right: 15px;
+}
+
+
+/* Fenster-Styling */
+.window-container {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    box-shadow: 5px 5px 15px rgba(0,0,0,0.5);
+    display: flex;
+    flex-direction: column;
+    position: absolute; /* Wichtig für jQuery UI */
+}
+
+.window-header {
+    background: #2a2a2a;
+    color: #e0e0e0;
+    padding: 8px;
+    cursor: move;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #333;
+}
+
+.window-title {
+    font-weight: bold;
+}
+
+.win-btn {
+    background: #444;
+    color: white;
+    border: 1px solid #666;
+    width: 25px;
+    height: 25px;
+    cursor: pointer;
+}
+.win-btn:hover { background: #555; }
+.win-close:hover { background: #ff4d4d; }
+
+.window-content {
+    flex-grow: 1;
+    padding: 10px;
+    overflow: auto;
+}
+
+.window-template {
+    display: none; /* Vorlagen sind standardmäßig unsichtbar */
+}

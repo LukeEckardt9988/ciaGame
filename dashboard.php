@@ -1,15 +1,12 @@
 <?php
 session_start();
-
-// Wenn der User nicht eingeloggt ist, zum Login weiterleiten
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit;
 }
-
 require 'db_connect.php';
 
-// Hole alle Achievements des eingeloggten Benutzers
+// Diese Abfrage bleibt, falls du sie später für etwas anderes brauchst.
 $sql = "SELECT a.name, a.description, a.icon
         FROM achievements a
         JOIN user_achievements ua ON a.id = ua.achievement_id
@@ -21,63 +18,90 @@ $achievements = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <!DOCTYPE html>
 <html lang="de">
+
 <head>
     <meta charset="UTF-8">
-    <title>Dashboard</title>
+    <title>BND Desktop</title>
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
     <link rel="stylesheet" href="style.css">
-    <style>
-        body { font-family: sans-serif; background-color: #1a1a1a; color: #e0e0e0; padding: 2rem; }
-        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #444; padding-bottom: 1rem; margin-bottom: 20px;}
-        .header a {
-            color: #00ff7f; /* Passend zum CI des Spiels */
-            text-decoration: none;
-            background-color: #2a2a2a;
-            padding: 8px 15px;
-            border-radius: 4px;
-            border: 1px solid #444;
-        }
-        .header a:hover {
-            background-color: #3a3a3a;
-            text-decoration: none;
-        }
-        .sections { display: flex; gap: 40px; }
-        .section { flex: 1; background: #2a2a2a; padding: 1.5rem; border-radius: 8px; border: 1px solid #333; }
-        .section h2 { color: #00ff7f; margin-top: 0; }
-        .section ul { list-style: none; padding: 0; }
-        .section li { margin-bottom: 10px; }
-        .section a { color: #57e0ff; text-decoration: none; }
-        .section a:hover { text-decoration: underline; }
-        .achievement-card { background: #1a1a1a; padding: 1rem; border-radius: 4px; margin-bottom: 1rem; border-left: 3px solid #f0e68c; }
-        .achievement-card h3 { color: #f0e68c; margin-top: 0; }
-    </style>
+    <link rel="stylesheet" href="desktop.css">
 </head>
+
 <body>
-    <div class="header">
-        <h1>Willkommen, Rekrut <?php echo htmlspecialchars($_SESSION['username']); ?>!</h1>
-        <a href="logout.php">Ausloggen</a>
+
+    <div id="desktop">
+        <div class="desktop-icon" id="icon-console">
+            <img src="https://img.icons8.com/ios-filled/100/00ff7f/console.png" alt="console" />
+            <span>Konsole</span>
+        </div>
+        <div class="desktop-icon" id="icon-emails">
+            <img src="https://img.icons8.com/ios-filled/100/00ff7f/new-post.png" alt="new-post" />
+            <span>E-Mails</span>
+        </div>
     </div>
 
-    <div class="sections">
-        <div class="section email-access">
-            <h2>Kommunikationszentrale</h2>
-            <ul>
-                <li><a href="emails.php">E-Mail-Posteingang &raquo;</a></li>
-            </ul>
+    <div id="taskbar">
+        <div class="start-menu-button">BND</div>
+        <div id="taskbar-windows"></div>
+        <div class="taskbar-logout">
+            <a href="logout.php">Ausloggen</a>
         </div>
+    </div>
 
-        <div class="section achievements">
-            <h2>Deine Auszeichnungen</h2>
-            <?php if (empty($achievements)): ?>
-                <p>Du hast noch keine Auszeichnungen erhalten. Schließe Missionen ab, um sie zu verdienen.</p>
-            <?php else: ?>
-                <?php foreach ($achievements as $ach): ?>
-                    <div class="achievement-card">
-                        <h3><?php echo htmlspecialchars($ach['name']); ?></h3>
-                        <p><?php echo htmlspecialchars($ach['description']); ?></p>
+    <div class="window-template" id="console-window-template">
+        <div class="window-container resizable-draggable" data-window-id="console">
+            <div class="window-header">
+                <span class="window-title">C:\WINDOWS\system32\cmd.exe</span>
+                <div class="window-buttons">
+                    <button class="win-btn win-minimize">-</button>
+                    <button class="win-btn win-maximize">[]</button>
+                    <button class="win-btn win-close">X</button>
+                </div>
+            </div>
+            <div class="window-content">
+                <div class="console-parent-container" style="height:100%; display:flex; flex-direction:column;">
+                    <div class="panel console-container" style="flex-grow:1;">
+                        <div id="console-output">BND Secure Terminal v3.0<br>Bereit...<br></div>
                     </div>
-                <?php endforeach; ?>
-            <?php endif; ?>
+                    <div class="console-input-area">
+                        <select id="command-dropdown" disabled>
+                            <option>-- Programm wählen --</option>
+                        </select>
+                        <input type="text" id="argument-input" placeholder="---" disabled>
+                        <button id="execute-btn" disabled>Execute</button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
+
+    <div class="window-template" id="console-window-template">
+        <div class="window-container resizable-draggable" data-window-id="console">
+            <div class="window-header">
+                <span class="window-title">BND Secure Terminal</span>
+                <div class="window-buttons">
+                    <button class="win-btn win-minimize">-</button>
+                    <button class="win-btn win-maximize">[]</button>
+                    <button class="win-btn win-close">X</button>
+                </div>
+            </div>
+            <div class="window-content" style="background-color: #0d0d0d; color: #00ff7f; font-family: 'Courier New', Courier, monospace;">
+                <div id="console-output-area" style="height: calc(100% - 30px); overflow-y: auto; white-space: pre-wrap; word-wrap: break-word;">
+                    BND Secure Terminal v3.0 gestartet.<br>
+                    Nutze 'help' für eine Liste verfügbarer Programme.<br>
+                </div>
+                <div class="console-input-line" style="display: flex; height: 30px;">
+                    <span class="prompt" style="color: #f0e68c;">></span>
+                    <input type="text" id="console-input" style="flex-grow: 1; background: transparent; border: none; color: #00ff7f; outline: none; padding-left: 5px;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+    <script src="desktop.js"></script>
 </body>
+
 </html>
