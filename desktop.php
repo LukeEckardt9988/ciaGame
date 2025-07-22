@@ -8,19 +8,21 @@ require 'db_connect.php';
 ?>
 <!DOCTYPE html>
 <html lang="de">
+
 <head>
     <meta charset="UTF-8">
     <title>BND Desktop</title>
     <link rel="stylesheet" href="desktop.css">
 </head>
+
 <body>
     <div id="desktop">
         <div class="desktop-icon" id="icon-console">
-            <img src="https://img.icons8.com/ios-filled/100/00ff7f/console.png" alt="console"/>
+            <img src="https://img.icons8.com/ios-filled/100/00ff7f/console.png" alt="console" />
             <span>Konsole</span>
         </div>
         <div class="desktop-icon" id="icon-emails">
-            <img src="https://img.icons8.com/ios-filled/100/00ff7f/new-post.png" alt="emails"/>
+            <img src="https://img.icons8.com/ios-filled/100/00ff7f/new-post.png" alt="emails" />
             <span>E-Mails</span>
         </div>
 
@@ -38,6 +40,10 @@ require 'db_connect.php';
         </div>
     </div>
 
+    <div id="taskbar">
+        <a href="logout.php" class="logout-link">Ausloggen</a>
+    </div>
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             let highestZ = 101;
@@ -49,7 +55,10 @@ require 'db_connect.php';
 
             function makeDraggable(element) {
                 const header = element.querySelector('.window-header');
-                let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+                let pos1 = 0,
+                    pos2 = 0,
+                    pos3 = 0,
+                    pos4 = 0;
                 header.onmousedown = function(e) {
                     e.preventDefault();
                     bringToFront(element);
@@ -58,6 +67,7 @@ require 'db_connect.php';
                     document.onmouseup = closeDragElement;
                     document.onmousemove = elementDrag;
                 };
+
                 function elementDrag(e) {
                     e.preventDefault();
                     pos1 = pos3 - e.clientX;
@@ -67,6 +77,7 @@ require 'db_connect.php';
                     element.style.top = (element.offsetTop - pos2) + "px";
                     element.style.left = (element.offsetLeft - pos1) + "px";
                 }
+
                 function closeDragElement() {
                     document.onmouseup = null;
                     document.onmousemove = null;
@@ -77,7 +88,7 @@ require 'db_connect.php';
             const consoleIcon = document.getElementById('icon-console');
             const consoleWindow = document.getElementById('console-window');
             const closeConsoleBtn = document.getElementById('close-console-btn');
-            
+
             consoleIcon.addEventListener('click', () => {
                 consoleWindow.classList.remove('hidden');
                 bringToFront(consoleWindow);
@@ -89,18 +100,18 @@ require 'db_connect.php';
             const emailsIcon = document.getElementById('icon-emails');
             const emailsWindow = document.getElementById('emails-window');
             const closeEmailsBtn = document.getElementById('close-emails-btn');
-            
+
             emailsIcon.addEventListener('click', () => {
                 emailsWindow.classList.remove('hidden');
                 bringToFront(emailsWindow);
             });
             closeEmailsBtn.addEventListener('click', () => emailsWindow.classList.add('hidden'));
             makeDraggable(emailsWindow);
-            
+
             // --- Konsolen-Logik (unverändert) ---
             const consoleInput = document.getElementById('console-input');
             const consoleOutput = document.getElementById('console-output');
-            
+
             consoleInput.addEventListener('keydown', function(e) {
                 if (e.key === 'Enter') {
                     const command = consoleInput.value;
@@ -108,26 +119,30 @@ require 'db_connect.php';
                     consoleOutput.innerHTML += `<br><span style="color: #f0e68c;">> ${command}</span><br>`;
                     consoleInput.value = '';
                     if (command.toLowerCase() === 'clear') {
-                        consoleOutput.innerHTML = ''; return;
+                        consoleOutput.innerHTML = '';
+                        return;
                     }
                     fetch('api_console.php', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: 'command=' + encodeURIComponent(command)
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        const formattedOutput = data.output.replace(/\n/g, '<br>');
-                        consoleOutput.innerHTML += `<span style="color: #00ff7f;">${formattedOutput}</span>`;
-                        consoleOutput.scrollTop = consoleOutput.scrollHeight;
-                    })
-                    .catch(error => {
-                        consoleOutput.innerHTML += '<br>FATAL: Verbindung zum Command-Server verloren.';
-                        consoleOutput.scrollTop = consoleOutput.scrollHeight;
-                    });
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded'
+                            },
+                            body: 'command=' + encodeURIComponent(command)
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            const formattedOutput = data.output.replace(/\n/g, '<br>');
+                            consoleOutput.innerHTML += `<span style="color: #00ff7f;">${formattedOutput}</span>`;
+                            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+                        })
+                        .catch(error => {
+                            consoleOutput.innerHTML += '<br>FATAL: Verbindung zum Command-Server verloren.';
+                            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+                        });
                 }
             });
         });
     </script>
 </body>
+
 </html>

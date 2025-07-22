@@ -10,7 +10,7 @@
   #desktop {
       height: 100%;
       width: 100%;
-      background: #0d0d0d url('https://i.imgur.com/6U22EHa.jpg') no-repeat center center;
+      background: #0d0d0d url('image/desktop-background.jpg') no-repeat center center;
       background-size: cover;
       position: relative;
       padding: 20px;
@@ -122,3 +122,34 @@
       outline: none;
       font-size: 1em;
   }
+
+  /* Styling für die Taskleiste */
+#taskbar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 40px;
+    background: #1a1a1a;
+    border-top: 1px solid #333;
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    box-sizing: border-box;
+    z-index: 9999;
+}
+
+#taskbar .logout-link {
+    color: #e0e0e0;
+    text-decoration: none;
+    margin-left: auto; /* Schiebt den Link nach ganz rechts */
+}
+
+#taskbar .logout-link:hover {
+    text-decoration: underline;
+}
+
+/* Wichtige Anpassung für den Desktop-Bereich */
+#desktop {
+    height: calc(100% - 40px); /* Schafft Platz für die Taskleiste */
+}
