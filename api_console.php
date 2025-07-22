@@ -1,94 +1,74 @@
 <?php
 session_start();
 header('Content-Type: application/json');
-
 if (!isset($_SESSION['user_id']) || !isset($_POST['command'])) {
     echo json_encode(['output' => 'Fehler: Nicht autorisierter Zugriff.']);
     exit;
 }
-
 require 'db_connect.php';
 
+// --- Globale Variablen & Befehls-Parsing ---
 $user_id = $_SESSION['user_id'];
 $full_command = trim($_POST['command']);
 $parts = explode(' ', $full_command);
-$program = strtolower(array_shift($parts)); // Das erste Wort ist das Programm, z.B. 'nmap'
-$arguments = $parts; // Der Rest sind Argumente
+$program_name = strtolower($parts[0]);
+$arguments = array_slice($parts, 1);
 
-$response = ['output' => "Befehl nicht gefunden: '$program'. Tippe 'help' für eine Liste."];
+// --- Befehls-Router ---
+$response = ['output' => "Befehl nicht gefunden: '" . htmlspecialchars($program_name) . "'."];
 
-// Funktion zur Simulation eines Nmap-Scans
-function simulate_nmap($target_ip, $pdo) {
-    // 1. Finde das Zielgerät in der Datenbank
-    $stmt = $pdo->prepare("SELECT u.username, d.* FROM player_devices d JOIN users u ON d.user_id = u.id WHERE u.ip_address = :ip");
-    $stmt->execute([':ip' => $target_ip]);
-    $device = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if (!$device) {
-        return "Host $target_ip scheint down zu sein oder existiert nicht.";
-    }
-
-    $output = "Starte Nmap Scan für $target_ip ($device[hostname])...\n";
-    $output .= "Scan Report für $target_ip\n";
-    $output .= "PORT    STATE    SERVICE\n";
-
-    $ports_data = json_decode($device['ports'], true);
-    $found_open_port = false;
-
-    foreach ($ports_data as $port => $details) {
-        if ($details['status'] === 'open') {
-            $found_open_port = true;
-            $service = htmlspecialchars($details['service'] ?? 'unknown');
-            $output .= str_pad($port."/tcp", 8) . str_pad("open", 9) . "$service\n";
-        }
-    }
-
-    if (!$found_open_port) {
-        $output .= "Alle 1000 gescannten Ports auf $target_ip sind filtered.";
-    }
-    
-    // Protokolliere den Scan im Event-Log des Ziels
-    // TODO: Füge hier die Logik zum Schreiben in $device['event_log'] hinzu
-
-    return $output;
-}
-
-
-// Befehls-Router
-switch ($program) {
-    case 'help':
-        $response['output'] = "Verfügbare Programme:\n  nmap   - Netzwerk-Scanner\n  whois  - Zeigt Informationen zu einer IP\n  clear  - Leert die Konsole (nur visuell)";
-        break;
-
+switch ($program_name) {
     case 'nmap':
-        $target_ip = end($arguments); // Annahme: die IP ist das letzte Argument
-        if (filter_var($target_ip, FILTER_VALIDATE_IP)) {
-            $response['output'] = simulate_nmap($target_ip, $pdo);
-        } else {
-            $response['output'] = "Nmap Fehler: Ungültige oder fehlende Ziel-IP.";
-        }
-        break;
+        $target_ip = end($arguments); // Das Ziel ist immer das letzte Argument
+        $flags = array_slice($arguments, 0, -1); // Alle Argumente davor sind Schalter/Flags
 
-    case 'whois':
-        $target_ip = $arguments[0] ?? '';
-        if (filter_var($target_ip, FILTER_VALIDATE_IP)) {
-            $stmt = $pdo->prepare("SELECT username FROM users WHERE ip_address = :ip");
-            $stmt->execute([':ip' => $target_ip]);
-            $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            if ($result) {
-                $response['output'] = "IP $target_ip ist registriert auf: $result[username]";
-            } else {
-                $response['output'] = "Kein Eintrag für $target_ip gefunden.";
+        if (!filter_var($target_ip, FILTER_VALIDATE_IP)) {
+            $response['output'] = "Nmap Fehler: Ungültiges oder fehlendes Ziel.";
+            break;
+        }
+
+        // Suche nach dem Ziel in der Datenbank (Spieler oder NPC)
+        $stmt = $pdo->prepare("SELECT u.username, d.* FROM player_devices d JOIN users u ON d.user_id = u.id WHERE u.ip_address = :ip");
+        $stmt->execute([':ip' => $target_ip]);
+        $device = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$device) {
+            $response['output'] = "Host " . htmlspecialchars($target_ip) . " scheint down zu sein.";
+            break;
+        }
+
+        // Logik für den "-A" (Aggressiver Scan) Schalter
+        if (in_array('-A', $flags)) {
+            $output = "Starte Nmap Aggressiv-Scan für " . htmlspecialchars($target_ip) . "...\n";
+            $output .= "  Hostname: " . htmlspecialchars($device['hostname']) . "\n";
+            $output .= "  Betriebssystem: " . htmlspecialchars($device['os_type']) . "\n";
+            
+            $ports_data = json_decode($device['ports'], true);
+            if (!empty($ports_data)) {
+                 $output .= "Offene Ports:\n";
+                 foreach ($ports_data as $port => $details) {
+                    if ($details['status'] === 'open') {
+                        $output .= "    " . $port . "/tcp - " . htmlspecialchars($details['service'] ?? 'unknown') . "\n";
+                    }
+                }
             }
+            $response['output'] = $output;
         } else {
-            $response['output'] = "Whois Fehler: Ungültiges IP-Format.";
+            // Standard-Port-Scan (ohne Schalter)
+            $output = "Starte Nmap Port Scan für " . htmlspecialchars($target_ip) . "...\n";
+            $ports_data = json_decode($device['ports'], true);
+            $output .= "PORT    STATE    SERVICE\n";
+             foreach ($ports_data as $port => $details) {
+                if ($details['status'] === 'open') {
+                    $output .= str_pad($port . "/tcp", 8) . str_pad("open", 9) . htmlspecialchars($details['service'] ?? 'unknown') . "\n";
+                }
+            }
+            $response['output'] = $output;
         }
         break;
     
-    // 'clear' wird im Frontend in desktop.js gehandhabt, aber wir verhindern eine Fehlermeldung.
-    case 'clear':
-         $response['output'] = ''; // Sende nichts zurück, das Frontend leert sich selbst
-         break;
+    // Hier können weitere Befehle wie 'whois' etc. eingefügt werden
+
 }
 
 echo json_encode($response);

@@ -2,46 +2,44 @@
 require 'db_connect.php';
 $message = '';
 
-// --- Logik zum Finden freier IPs ---
-$MIN_IP_OCTET = 2;
-$MAX_IP_OCTET = 254;
-$SUBNET = "10.0.10.";
+// --- Hilfsfunktionen für simulierte Daten ---
+function generate_gateway_ip() {
+    $subnets = ['192.168.0.1', '192.168.1.1', '192.168.2.1', '192.168.178.1'];
+    return $subnets[array_rand($subnets)];
+}
 
-// 1. Hole alle belegten IPs
-$stmt = $pdo->query("SELECT ip_address FROM users WHERE ip_address IS NOT NULL");
-$occupied_ips = $stmt->fetchAll(PDO::FETCH_COLUMN);
-
-// 2. Erstelle eine Liste aller möglichen IPs und filtere die belegten heraus
-$available_ips = [];
-for ($i = $MIN_IP_OCTET; $i <= $MAX_IP_OCTET; $i++) {
-    $current_ip = $SUBNET . $i;
-    if (!in_array($current_ip, $occupied_ips)) {
-        $available_ips[] = $current_ip;
-    }
+function generate_user_agent() {
+    $agents = [
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Safari/605.1.15"
+    ];
+    return $agents[array_rand($agents)];
 }
 
 
 // --- Formularverarbeitung ---
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $username = trim($_POST['username']);
-    $email = trim($_POST['email']);
     $password = trim($_POST['password']);
-    $chosen_ip = trim($_POST['ip_address']);
+    
+    // IP-Adresse auswählen (Logik von vorher)
+    $chosen_ip = trim($_POST['ip_address']); // Du brauchst das Dropdown für die IP-Auswahl noch
 
-    // Serverseitige Validierung, ob die IP wirklich frei war
-    if (empty($username) || empty($email) || empty($password) || empty($chosen_ip) || !in_array($chosen_ip, $available_ips)) {
-        $message = 'Alle Felder sind erforderlich und die IP muss verfügbar sein.';
+    if (empty($username) || empty($password) || empty($chosen_ip)) {
+        $message = 'Codename, Passwort und eine freie IP sind erforderlich.';
     } else {
+        // E-Mail automatisch generieren
+        $email = strtolower($username) . '@bnd.de';
         $password_hash = password_hash($password, PASSWORD_BCRYPT);
 
         try {
-            // Starte eine Transaktion, um Datenintegrität zu sichern
             $pdo->beginTransaction();
 
             // 1. User erstellen
-            $sql = "INSERT INTO users (username, email, password_hash, ip_address) VALUES (:username, :email, :password_hash, :ip)";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([
+            $sql_user = "INSERT INTO users (username, email, password_hash, ip_address) VALUES (:username, :email, :password_hash, :ip)";
+            $stmt_user = $pdo->prepare($sql_user);
+            $stmt_user->execute([
                 ':username' => $username,
                 ':email' => $email,
                 ':password_hash' => $password_hash,
@@ -49,12 +47,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             ]);
             $new_user_id = $pdo->lastInsertId();
 
-            // 2. Zugehöriges Gerät für den User erstellen
-            $sql_device = "INSERT INTO player_devices (user_id, hostname) VALUES (:user_id, :hostname)";
+            // 2. Zugehöriges Gerät mit simulierten Daten erstellen
+            $sql_device = "INSERT INTO player_devices (user_id, hostname, gateway_ip, user_agent, ports) VALUES (:user_id, :hostname, :gateway, :agent, :ports)";
             $stmt_device = $pdo->prepare($sql_device);
             $stmt_device->execute([
                 ':user_id' => $new_user_id,
-                ':hostname' => strtolower($username) . '-pc' // z.B. 'luke-pc'
+                ':hostname' => strtolower($username) . '-pc',
+                ':gateway' => generate_gateway_ip(),
+                ':agent' => generate_user_agent(),
+                ':ports' => '{"22":{"status":"closed"}, "80":{"status":"closed"}}' // Standard-Ports
             ]);
             $new_device_id = $pdo->lastInsertId();
 
@@ -64,16 +65,27 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $stmt_update->execute([':device_id' => $new_device_id, ':user_id' => $new_user_id]);
 
             $pdo->commit();
-            $message = 'Registrierung erfolgreich! Du kannst dich jetzt einloggen.';
+            $message = "Registrierung erfolgreich! Deine E-Mail-Adresse lautet: " . htmlspecialchars($email);
 
         } catch (PDOException $e) {
             $pdo->rollBack();
             if ($e->errorInfo[1] == 1062) {
-                $message = 'Fehler: Benutzername, E-Mail oder IP bereits vergeben.';
+                $message = 'Fehler: Codename oder IP bereits vergeben.';
             } else {
                 $message = 'Ein Fehler ist aufgetreten: ' . $e->getMessage();
             }
         }
+    }
+}
+
+// Logik zum Finden freier IPs für das Dropdown
+$stmt_ips = $pdo->query("SELECT ip_address FROM users WHERE ip_address IS NOT NULL");
+$occupied_ips = $stmt_ips->fetchAll(PDO::FETCH_COLUMN);
+$available_ips = [];
+for ($i = 2; $i <= 254; $i++) {
+    $current_ip = "10.0.10." . $i;
+    if (!in_array($current_ip, $occupied_ips)) {
+        $available_ips[] = $current_ip;
     }
 }
 ?>
@@ -81,32 +93,31 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>BND Game - Registrierung</title>
-    <link rel="stylesheet" href="login_style.css"> 
-</head>
+    <title>BND Rekrutierung</title>
+    </head>
 <body>
     <div class="container">
-        <h2>Neuen Rekruten anwerben</h2>
+        <h2>Neuen Agenten registrieren</h2>
+        
+        <div class="info-box" style="background-color:#f0f8ff; border-left: 4px solid #1e90ff; padding: 10px; margin-bottom: 20px;">
+            <p><strong>Hinweis:</strong> Du benötigst nur einen Codenamen und ein Passwort.</p>
+            <p>Deine offizielle Dienst-E-Mail wird automatisch aus deinem Codenamen generiert (z.B. <strong>codename@bnd.de</strong>) und ist für die Kommunikation im Spiel erforderlich.</p>
+        </div>
+
         <?php if (!empty($message)) { echo "<p class='message'>" . htmlspecialchars($message) . "</p>"; } ?>
         <form action="register.php" method="post">
-            <input type="text" name="username" placeholder="Codename (Username)" required>
-            <input type="email" name="email" placeholder="Sichere E-Mail" required>
+            <input type="text" name="username" placeholder="Codename" required>
             <input type="password" name="password" placeholder="Passwort" required>
             
-            <label for="ip_address">Wähle deine System-IP:</label>
+            <label for="ip_address">Wähle deine System-IP im internen Netz:</label>
             <select name="ip_address" id="ip_address" required>
-                <?php if (empty($available_ips)): ?>
-                    <option value="">-- Kein freier Slot im Netzwerk --</option>
-                <?php else: ?>
-                    <?php foreach ($available_ips as $ip): ?>
-                        <option value="<?php echo htmlspecialchars($ip); ?>"><?php echo htmlspecialchars($ip); ?></option>
-                    <?php endforeach; ?>
-                <?php endif; ?>
+                <?php foreach ($available_ips as $ip): ?>
+                    <option value="<?php echo htmlspecialchars($ip); ?>"><?php echo htmlspecialchars($ip); ?></option>
+                <?php endforeach; ?>
             </select>
 
             <button type="submit">Registrierung abschließen</button>
         </form>
-        <p>Schon dabei? <a href="login.php">Hier einloggen</a></p>
     </div>
 </body>
 </html>

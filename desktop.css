@@ -1,105 +1,124 @@
-/* desktop.css */
-html, body {
-    overflow: hidden; /* Verhindert Scrollbalken auf der Hauptseite */
-    height: 100%;
-    margin: 0;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
+  /* CSS direkt hier, um Fehlerquellen auszuschließen */
+  html,
+  body {
+      overflow: hidden;
+      height: 100%;
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+  }
 
-#desktop {
-    height: calc(100% - 40px); /* Volle Höhe minus Taskleiste */
-    width: 100%;
-    background: #0d0d0d url('image/desktop-background.jpg') no-repeat center center;
-    background-size: cover;
-    position: relative;
-    padding: 20px;
-    box-sizing: border-box;
-}
+  #desktop {
+      height: 100%;
+      width: 100%;
+      background: #0d0d0d url('https://i.imgur.com/6U22EHa.jpg') no-repeat center center;
+      background-size: cover;
+      position: relative;
+      padding: 20px;
+      box-sizing: border-box;
+  }
 
-.desktop-icon {
-    width: 100px;
-    text-align: center;
-    color: white;
-    cursor: pointer;
-    margin-bottom: 20px;
-}
-.desktop-icon img {
-    width: 64px;
-    height: 64px;
-}
-.desktop-icon span {
-    display: block;
-    text-shadow: 1px 1px 3px black;
-}
+  .desktop-icon {
+      width: 100px;
+      text-align: center;
+      color: white;
+      cursor: pointer;
+      margin-bottom: 20px;
+  }
 
-#taskbar {
-    position: absolute;
-    bottom: 0;
-    width: 100%;
-    height: 40px;
-    background: #1a1a1a;
-    border-top: 1px solid #333;
-    display: flex;
-    align-items: center;
-    z-index: 10000;
-}
+  .desktop-icon img {
+      width: 64px;
+      height: 64px;
+  }
 
-.start-menu-button {
-    color: #00ff7f;
-    font-weight: bold;
-    padding: 0 15px;
-    cursor: pointer;
-}
-.taskbar-logout a {
-    color: #e0e0e0;
-    text-decoration: none;
-    position: absolute;
-    right: 15px;
-}
+  .desktop-icon span {
+      display: block;
+      text-shadow: 1px 1px 2px #000;
+  }
 
+  .hidden {
+      display: none !important;
+  }
 
-/* Fenster-Styling */
-.window-container {
-    background: #1a1a1a;
-    border: 1px solid #333;
-    box-shadow: 5px 5px 15px rgba(0,0,0,0.5);
-    display: flex;
-    flex-direction: column;
-    position: absolute; /* Wichtig für jQuery UI */
-}
+  .window-container {
+      position: absolute;
+      background-color: #1a1a1a;
+      border: 1px solid #333;
+      box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.5);
+      display: flex;
+      flex-direction: column;
+  }
 
-.window-header {
-    background: #2a2a2a;
-    color: #e0e0e0;
-    padding: 8px;
-    cursor: move;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid #333;
-}
+  #console-window {
+      top: 50px;
+      left: 50px;
+      width: 700px;
+      height: 400px;
+      z-index: 100;
+  }
 
-.window-title {
-    font-weight: bold;
-}
+  #emails-window {
+      top: 100px;
+      left: 100px;
+      width: 850px;
+      height: 600px;
+      z-index: 100;
+  }
 
-.win-btn {
-    background: #444;
-    color: white;
-    border: 1px solid #666;
-    width: 25px;
-    height: 25px;
-    cursor: pointer;
-}
-.win-btn:hover { background: #555; }
-.win-close:hover { background: #ff4d4d; }
+  .window-header {
+      background: #2a2a2a;
+      color: #e0e0e0;
+      padding: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: move;
+  }
 
-.window-content {
-    flex-grow: 1;
-    padding: 10px;
-    overflow: auto;
-}
+  .win-btn {
+      background-color: #ff4d4d;
+      color: white;
+      border: none;
+      cursor: pointer;
+      width: 25px;
+      height: 25px;
+  }
 
-.window-template {
-    display: none; /* Vorlagen sind standardmäßig unsichtbar */
-}
+  .window-content {
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+  }
+
+  #console-window .window-content {
+      padding: 5px;
+      font-family: 'Courier New', Courier, monospace;
+      background-color: #131313;
+  }
+
+  .console-output-area {
+      flex-grow: 1;
+      overflow-y: auto;
+      white-space: pre-wrap;
+  }
+
+  .console-input-line {
+      display: flex;
+      align-items: center;
+      border-top: 1px solid #333;
+      padding-top: 5px;
+  }
+
+  .console-input-line .prompt {
+      color: #f0e68c;
+      margin-right: 5px;
+  }
+
+  .console-input-line .console-input {
+      flex-grow: 1;
+      background: transparent;
+      border: none;
+      color: #00ff7f;
+      outline: none;
+      font-size: 1em;
+  }
